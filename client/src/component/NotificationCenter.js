@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import styled, { keyframes } from 'styled-components';
-import { ListGroup, Tab, Tabs } from 'react-bootstrap';
+import { ListGroup, Tab, Tabs, Button } from 'react-bootstrap';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FaBell, FaCalendarAlt } from 'react-icons/fa';
+import { FaBell, FaCalendarAlt, FaBookOpen, FaBullhorn } from 'react-icons/fa';
+import { ThreeDots } from 'react-loader-spinner';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const fadeIn = keyframes`
@@ -52,9 +53,23 @@ const NoNotificationsMessage = styled.p`
   font-style: italic;
 `;
 
+const LoadingOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
 function NotificationCenter() {
   const [notifications, setNotifications] = useState([]);
   const [registeredExams, setRegisteredExams] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
@@ -62,38 +77,62 @@ function NotificationCenter() {
   }, []);
 
   const fetchNotifications = async () => {
+    setLoading(true);
     try {
       const response = await axios.get('http://localhost:5000/users/notifications');
-      const filteredNotifications = response.data.filter(notification => 
-        notification.type === 'announcement' || 
-        (notification.type === 'reminder' && isUpcomingExam(notification.date))
-      );
-      setNotifications(filteredNotifications);
+      setNotifications(response.data.filter(notification => 
+        notification.type === 'announcement' || notification.message.includes('registered') || notification.message.includes('New exam')
+      ));
     } catch (error) {
       console.error('Error fetching notifications:', error);
       toast.error('Failed to fetch notifications');
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchRegisteredExams = async () => {
+    setLoading(true);
     try {
       const response = await axios.get('http://localhost:5000/users/registeredExams');
       setRegisteredExams(response.data);
     } catch (error) {
       console.error('Error fetching registered exams:', error);
       toast.error('Failed to fetch registered exams');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const isUpcomingExam = (date) => {
-    const examDate = new Date(date);
-    const now = new Date();
-    const oneWeek = 7 * 24 * 60 * 60 * 1000; // one week in milliseconds
-    return examDate > now && examDate - now <= oneWeek;
+  const addToCalendar = async (examId) => {
+    setLoading(true);
+    try {
+      const response = await axios.post('http://localhost:5000/exams/addToCalendar', { examId });
+      if (response.data.authUrl) {
+        window.location.href = response.data.authUrl;
+      } else {
+        toast.success('Exam added to your calendar');
+        setRegisteredExams(prevExams => 
+          prevExams.map(exam => 
+            exam._id === examId ? { ...exam, addedToCalendar: true } : exam
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error adding exam to calendar:', error);
+      toast.error('Failed to add exam to calendar');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <StyledCard>
+      {loading && (
+        <LoadingOverlay>
+          <ThreeDots color="#00BFFF" height={80} width={80} />
+        </LoadingOverlay>
+      )}
       <StyledTitle>Notification Center</StyledTitle>
       <Tabs defaultActiveKey="notifications" id="notification-tabs">
         <Tab eventKey="notifications" title="Notifications">
@@ -102,9 +141,11 @@ function NotificationCenter() {
               notifications.map(notification => (
                 <StyledListItem key={notification._id}>
                   <Icon>
-                    <FaBell />
+                    {notification.type === 'announcement' ? <FaBullhorn /> : 
+                     notification.type === 'reminder' ? <FaBell /> : 
+                     notification.type === 'material' ? <FaBookOpen /> : <FaCalendarAlt />}
                   </Icon>
-                  <strong>{notification.type === 'announcement' ? 'New Exam Created' : 'Upcoming Exam'}:</strong> {notification.message}
+                  <strong>{notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}:</strong> {notification.message}
                   <br />
                   <small>{new Date(notification.date).toLocaleString()}</small>
                 </StyledListItem>
@@ -126,7 +167,24 @@ function NotificationCenter() {
                   <br />
                   Date: {new Date(exam.date).toLocaleDateString()}
                   <br />
+                  Time: {new Date(exam.date).toLocaleTimeString()}
+                  <br />
                   Venue: {exam.venue}
+                  <br />
+                  {exam.addedToCalendar ? (
+                    <Button variant="success" size="sm" disabled>
+                      Added to Calendar
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm" 
+                      onClick={() => addToCalendar(exam._id)}
+                      disabled={loading}
+                    >
+                      {loading ? <ThreeDots color="#00BFFF" height={20} width={40} /> : 'Add to Calendar'}
+                    </Button>
+                  )}
                 </StyledListItem>
               ))
             ) : (

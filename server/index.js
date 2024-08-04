@@ -31,6 +31,11 @@ const userSchema = new mongoose.Schema({
     enum: ['email', 'sms', 'in-app'],
     default: ['email'],
   },
+  reminderFrequency: {
+    type: String,
+    enum: ['daily', 'weekly', 'monthly'],
+    default: 'daily',
+  },
   examRegistrations: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Exam',
@@ -283,16 +288,41 @@ app.get('/oauth2callback', async (req, res) => {
 
 app.post('/users/updatePreferences', async (req, res) => {
   try {
-    const { notificationPreferences } = req.body;
+    const { notificationPreferences, reminderFrequency } = req.body;
     const user = await User.findOne();
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     user.notificationPreferences = notificationPreferences;
+    user.reminderFrequency = reminderFrequency;
     await user.save();
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: 'Error updating preferences', error });
+  }
+});
+
+app.post('/exams/addToCalendar', async (req, res) => {
+  try {
+    const { examId } = req.body;
+    const user = await User.findOne();
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const exam = await Exam.findById(examId);
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    if (user.calendarToken) {
+      await addEventToCalendar(user, exam);
+      res.json({ message: 'Exam added to calendar successfully' });
+    } else {
+      const authUrl = getAuthUrl(user);
+      res.json({ authUrl });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding exam to calendar', error });
   }
 });
 
@@ -392,6 +422,7 @@ app.post('/exams/:examId/materials', async (req, res) => {
 // Helper function to create exam notifications
 async function createExamNotifications(user, exam) {
   const reminderDates = [
+    { days: 30, message: '1 month' },
     { days: 7, message: '1 week' },
     { days: 1, message: '1 day' },
     { days: 0, message: 'today' }

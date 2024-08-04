@@ -4,7 +4,7 @@ import styled, { keyframes } from 'styled-components';
 import { Form, Button } from 'react-bootstrap';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FaEnvelope, FaSms, FaMobileAlt } from 'react-icons/fa';
+import { FaEnvelope, FaSms, FaMobileAlt, FaClock } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const fadeIn = keyframes`
@@ -54,6 +54,7 @@ const StyledButton = styled(Button)`
 
 function UserSettings() {
   const [preferences, setPreferences] = useState([]);
+  const [reminderFrequency, setReminderFrequency] = useState('daily');
 
   useEffect(() => {
     fetchPreferences();
@@ -63,6 +64,7 @@ function UserSettings() {
     try {
       const response = await axios.get('http://localhost:5000/users');
       setPreferences(response.data.notificationPreferences);
+      setReminderFrequency(response.data.reminderFrequency || 'daily');
     } catch (error) {
       console.error('Error fetching user settings:', error);
       toast.error('Failed to fetch user settings');
@@ -71,7 +73,10 @@ function UserSettings() {
 
   const updatePreferences = async () => {
     try {
-      await axios.post('http://localhost:5000/users/updatePreferences', { notificationPreferences: preferences });
+      await axios.post('http://localhost:5000/users/updatePreferences', { 
+        notificationPreferences: preferences,
+        reminderFrequency
+      });
       toast.success('Preferences updated successfully!');
     } catch (error) {
       console.error('Error updating preferences:', error);
@@ -114,6 +119,18 @@ function UserSettings() {
           checked={preferences.includes('in-app')}
           onChange={handlePreferenceChange}
         />
+        <Form.Group>
+          <Form.Label><FaClock /> Reminder Frequency</Form.Label>
+          <Form.Control 
+            as="select" 
+            value={reminderFrequency} 
+            onChange={(e) => setReminderFrequency(e.target.value)}
+          >
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </Form.Control>
+        </Form.Group>
         <StyledButton onClick={updatePreferences}>Save Preferences</StyledButton>
       </Form>
       <ToastContainer position="bottom-right" />

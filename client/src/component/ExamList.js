@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import styled, { keyframes } from 'styled-components';
-import { Container, Row, Col, Button, Card, ListGroup, Nav } from 'react-bootstrap';
+import { Container, Row, Col, Button, Card, ListGroup, Nav, Spinner } from 'react-bootstrap';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FaCalendarAlt, FaBookOpen, FaBullhorn, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaCalendarAlt, FaBookOpen, FaBullhorn, FaChevronDown, FaChevronUp, FaMapMarkerAlt, FaClock } from 'react-icons/fa';
+import { ThreeDots } from 'react-loader-spinner';
 import 'bootstrap/dist/css/bootstrap.min.css';
+
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -98,17 +100,32 @@ const DetailsWrapper = styled.div`
   width: 100%;
 `;
 
+const LoadingOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
 function ExamList() {
   const [availableExams, setAvailableExams] = useState([]);
   const [registeredExams, setRegisteredExams] = useState([]);
   const [activeTab, setActiveTab] = useState('available');
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchExams();
   }, []);
 
   const fetchExams = async () => {
+    setLoading(true);
     try {
       const examsResponse = await axios.get('http://localhost:5000/exams');
       const registeredExamsResponse = await axios.get('http://localhost:5000/users/registeredExams');
@@ -121,10 +138,13 @@ function ExamList() {
       console.error('Error fetching exams:', error);
       setError('Failed to fetch exams. Please try again later.');
       toast.error('Failed to fetch exams. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const registerForExam = async (examId) => {
+    setLoading(true);
     try {
       const response = await axios.post('http://localhost:5000/exams/register', { examId });
       if (response.data.authUrl) {
@@ -135,6 +155,8 @@ function ExamList() {
     } catch (error) {
       console.error('There was an error!', error);
       toast.error(error.response?.data?.message || 'Failed to register for exam.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -144,6 +166,11 @@ function ExamList() {
 
   return (
     <StyledContainer>
+      {loading && (
+        <LoadingOverlay>
+          <ThreeDots color="#00BFFF" height={80} width={80} />
+        </LoadingOverlay>
+      )}
       <StyledNav variant="tabs">
         <Nav.Item>
           <StyledNavLink active={activeTab === 'available'} onClick={() => setActiveTab('available')}>
@@ -165,10 +192,21 @@ function ExamList() {
               <StyledListItem key={exam._id}>
                 <div>
                   <IconWrapper><FaCalendarAlt /></IconWrapper>
-                  {exam.name} - {new Date(exam.date).toLocaleDateString()}
+                  {exam.name}
+                  <br />
+                  <IconWrapper><FaClock /></IconWrapper>
+                  {new Date(exam.date).toLocaleString()}
+                  <br />
+                  <IconWrapper><FaMapMarkerAlt /></IconWrapper>
+                  {exam.venue}
                 </div>
                 {activeTab === 'available' ? (
-                  <StyledButton onClick={() => registerForExam(exam._id)}>Register</StyledButton>
+                  <StyledButton 
+                    onClick={() => registerForExam(exam._id)}
+                    disabled={loading}
+                  >
+                    {loading ? <ThreeDots color="#ffffff" height={20} width={40} /> : 'Register'}
+                  </StyledButton>
                 ) : (
                   <ExamDetails exam={exam} />
                 )}
