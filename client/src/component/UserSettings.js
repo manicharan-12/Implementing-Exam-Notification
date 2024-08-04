@@ -111,14 +111,14 @@ function UserSettings() {
           checked={preferences.includes('sms')}
           onChange={handlePreferenceChange}
         />
-        <StyledCheckbox
+        {/* <StyledCheckbox
           type="checkbox"
           id="in-app-pref"
           label={<><FaMobileAlt /> In-app</>}
           value="in-app"
           checked={preferences.includes('in-app')}
           onChange={handlePreferenceChange}
-        />
+        /> */}
         <Form.Group>
           <Form.Label><FaClock /> Reminder Frequency</Form.Label>
           <Form.Control 

@@ -1,23 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import styled, { keyframes } from 'styled-components';
-import { Container, Row, Col, Button, Card, ListGroup, Nav, Spinner } from 'react-bootstrap';
-import { ToastContainer, toast } from 'react-toastify';
+import styled from 'styled-components';
+import { Container, Button, Card, ListGroup, Nav } from 'react-bootstrap';
+import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FaCalendarAlt, FaBookOpen, FaBullhorn, FaChevronDown, FaChevronUp, FaMapMarkerAlt, FaClock } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaChevronDown, FaChevronUp, FaBookOpen, FaBullhorn } from 'react-icons/fa';
 import { ThreeDots } from 'react-loader-spinner';
 import 'bootstrap/dist/css/bootstrap.min.css';
-
-
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`;
-
-const slideIn = keyframes`
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-`;
 
 const StyledContainer = styled(Container)`
   padding: 20px;
@@ -29,7 +18,6 @@ const StyledCard = styled(Card)`
   margin-bottom: 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  animation: ${fadeIn} 0.5s ease-out;
 
   &:hover {
     transform: translateY(-5px);
@@ -51,12 +39,6 @@ const StyledNavLink = styled(Nav.Link)`
   &:hover {
     color: #6200ea;
   }
-`;
-
-const StyledTitle = styled.h2`
-  color: #2c3e50;
-  margin-bottom: 20px;
-  animation: ${slideIn} 0.5s ease-out;
 `;
 
 const StyledButton = styled(Button)`
@@ -114,10 +96,9 @@ const LoadingOverlay = styled.div`
 `;
 
 function ExamList() {
-  const [availableExams, setAvailableExams] = useState([]);
+  const [allExams, setAllExams] = useState([]);
   const [registeredExams, setRegisteredExams] = useState([]);
   const [activeTab, setActiveTab] = useState('available');
-  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -127,21 +108,27 @@ function ExamList() {
   const fetchExams = async () => {
     setLoading(true);
     try {
-      const examsResponse = await axios.get('https://implementing-exam-notification.onrender.com/exams');
-      const registeredExamsResponse = await axios.get('https://implementing-exam-notification.onrender.com/users/registeredExams');
-
-      const availableExams = examsResponse.data.filter(exam => !registeredExamsResponse.data.some(regExam => regExam._id === exam._id));
-
-      setAvailableExams(availableExams);
+      const [examsResponse, registeredExamsResponse] = await Promise.all([
+        axios.get('https://implementing-exam-notification.onrender.com/exams'),
+        axios.get('https://implementing-exam-notification.onrender.com/users/registeredExams')
+      ]);
+      setAllExams(examsResponse.data);
       setRegisteredExams(registeredExamsResponse.data);
     } catch (error) {
       console.error('Error fetching exams:', error);
-      setError('Failed to fetch exams. Please try again later.');
       toast.error('Failed to fetch exams. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
+
+  const availableExams = allExams.filter(exam => 
+    !registeredExams.some(regExam => regExam._id === exam._id)
+  );
+
+  console.log('All Exams:', allExams);
+  console.log('Registered Exams:', registeredExams);
+  console.log('Available Exams:', availableExams);
 
   const registerForExam = async (examId) => {
     setLoading(true);
@@ -149,20 +136,20 @@ function ExamList() {
       const response = await axios.post('https://implementing-exam-notification.onrender.com/exams/register', { examId });
       if (response.data.authUrl) {
         window.location.href = response.data.authUrl;
+      } else {
+        toast.success('Successfully registered for the exam');
+        await fetchExams(); // Refresh both exam lists
       }
-      toast.success(response.data.message);
-      await fetchExams(); // Refresh the exam lists
     } catch (error) {
-      console.error('There was an error!', error);
+      console.error('Registration error:', error);
       toast.error(error.response?.data?.message || 'Failed to register for exam.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (error) {
-    return <div className="error-message">{error}</div>;
-  }
+  const displayedExams = activeTab === 'available' ? availableExams : registeredExams;
+  console.log('Displayed Exams:', displayedExams);
 
   return (
     <StyledContainer>
@@ -173,45 +160,54 @@ function ExamList() {
       )}
       <StyledNav variant="tabs">
         <Nav.Item>
-          <StyledNavLink active={activeTab === 'available'} onClick={() => setActiveTab('available')}>
-            Available Exams
+          <StyledNavLink 
+            active={activeTab === 'available'} 
+            onClick={() => setActiveTab('available')}
+          >
+            Available Exams ({availableExams.length})
           </StyledNavLink>
         </Nav.Item>
         <Nav.Item>
-          <StyledNavLink active={activeTab === 'registered'} onClick={() => setActiveTab('registered')}>
-            Registered Exams
+          <StyledNavLink 
+            active={activeTab === 'registered'} 
+            onClick={() => setActiveTab('registered')}
+          >
+            Registered Exams ({registeredExams.length})
           </StyledNavLink>
         </Nav.Item>
       </StyledNav>
-
+      
       <StyledCard>
         <Card.Body>
-          <StyledTitle>{activeTab === 'available' ? 'Available Exams' : 'Registered Exams'}</StyledTitle>
           <ListGroup>
-            {(activeTab === 'available' ? availableExams : registeredExams).map(exam => (
-              <StyledListItem key={exam._id}>
-                <div>
-                  <IconWrapper><FaCalendarAlt /></IconWrapper>
-                  {exam.name}
-                  <br />
-                  <IconWrapper><FaClock /></IconWrapper>
-                  {new Date(exam.date).toLocaleString()}
-                  <br />
-                  <IconWrapper><FaMapMarkerAlt /></IconWrapper>
-                  {exam.venue}
-                </div>
-                {activeTab === 'available' ? (
-                  <StyledButton 
-                    onClick={() => registerForExam(exam._id)}
-                    disabled={loading}
-                  >
-                    {loading ? <ThreeDots color="#ffffff" height={20} width={40} /> : 'Register'}
-                  </StyledButton>
-                ) : (
-                  <ExamDetails exam={exam} />
-                )}
-              </StyledListItem>
-            ))}
+            {displayedExams.length > 0 ? (
+              displayedExams.map((exam) => (
+                <StyledListItem key={exam._id}>
+                  <div>
+                    <IconWrapper><FaCalendarAlt /></IconWrapper>
+                    {exam.name}
+                    <br />
+                    <IconWrapper><FaClock /></IconWrapper>
+                    {new Date(exam.date).toLocaleString()}
+                    <br />
+                    <IconWrapper><FaMapMarkerAlt /></IconWrapper>
+                    {exam.venue}
+                  </div>
+                  {activeTab === 'available' ? (
+                    <StyledButton 
+                      onClick={() => registerForExam(exam._id)}
+                      disabled={loading}
+                    >
+                      {loading ? <ThreeDots color="#ffffff" height={20} width={40} /> : 'Register'}
+                    </StyledButton>
+                  ) : (
+                    <ExamDetails exam={exam} />
+                  )}
+                </StyledListItem>
+              ))
+            ) : (
+              <StyledListItem>No {activeTab === 'available' ? 'available' : 'registered'} exams found.</StyledListItem>
+            )}
           </ListGroup>
         </Card.Body>
       </StyledCard>
@@ -236,15 +232,23 @@ function ExamDetails({ exam }) {
         <Card.Body>
           <h4><IconWrapper><FaBookOpen /></IconWrapper>Preparation Materials:</h4>
           <ListGroup>
-            {exam.preparationMaterials.map((material, index) => (
-              <ListGroup.Item key={index}>{material}</ListGroup.Item>
-            ))}
+            {exam.preparationMaterials && exam.preparationMaterials.length > 0 ? (
+              exam.preparationMaterials.map((material, index) => (
+                <ListGroup.Item key={index}>{material}</ListGroup.Item>
+              ))
+            ) : (
+              <ListGroup.Item>No preparation materials available.</ListGroup.Item>
+            )}
           </ListGroup>
           <h4><IconWrapper><FaBullhorn /></IconWrapper>Announcements:</h4>
           <ListGroup>
-            {exam.announcements.map((announcement, index) => (
-              <ListGroup.Item key={index}>{announcement}</ListGroup.Item>
-            ))}
+            {exam.announcements && exam.announcements.length > 0 ? (
+              exam.announcements.map((announcement, index) => (
+                <ListGroup.Item key={index}>{announcement}</ListGroup.Item>
+              ))
+            ) : (
+              <ListGroup.Item>No announcements available.</ListGroup.Item>
+            )}
           </ListGroup>
         </Card.Body>
       </DetailsWrapper>
