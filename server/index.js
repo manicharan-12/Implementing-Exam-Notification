@@ -94,7 +94,7 @@ const getAuthUrl = (user) => {
   const oAuth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
     process.env.CLIENT_SECRET,
-    'http://localhost:5000/oauth2callback'
+    'https://implementing-exam-notification.onrender.com/oauth2callback'
   );
 
   const authUrl = oAuth2Client.generateAuthUrl({
@@ -110,7 +110,7 @@ const addEventToCalendar = async (user, exam) => {
   const oAuth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
     process.env.CLIENT_SECRET,
-    'http://localhost:5000/oauth2callback'
+    'https://implementing-exam-notification.onrender.com/oauth2callback'
   );
 
   oAuth2Client.setCredentials({ refresh_token: user.calendarToken });
@@ -279,7 +279,7 @@ app.get('/oauth2callback', async (req, res) => {
 
     await addEventToCalendar(user, exam);
 
-    res.redirect('http://localhost:3000');
+    res.redirect('https://implementing-exam-notification.vercel.app/');
   } catch (error) {
     console.error('Error during OAuth2 callback:', error);
     res.status(500).send('Error during OAuth2 callback');

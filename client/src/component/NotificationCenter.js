@@ -79,7 +79,7 @@ function NotificationCenter() {
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:5000/users/notifications');
+      const response = await axios.get('https://implementing-exam-notification.onrender.com/users/notifications');
       setNotifications(response.data.filter(notification => 
         notification.type === 'announcement' || notification.message.includes('registered') || notification.message.includes('New exam')
       ));
@@ -94,7 +94,7 @@ function NotificationCenter() {
   const fetchRegisteredExams = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:5000/users/registeredExams');
+      const response = await axios.get('https://implementing-exam-notification.onrender.com/users/registeredExams');
       setRegisteredExams(response.data);
     } catch (error) {
       console.error('Error fetching registered exams:', error);
@@ -107,7 +107,7 @@ function NotificationCenter() {
   const addToCalendar = async (examId) => {
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:5000/exams/addToCalendar', { examId });
+      const response = await axios.post('https://implementing-exam-notification.onrender.com/exams/addToCalendar', { examId });
       if (response.data.authUrl) {
         window.location.href = response.data.authUrl;
       } else {

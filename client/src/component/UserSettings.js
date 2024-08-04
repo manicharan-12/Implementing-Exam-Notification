@@ -62,7 +62,7 @@ function UserSettings() {
 
   const fetchPreferences = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/users');
+      const response = await axios.get('https://implementing-exam-notification.onrender.com/users');
       setPreferences(response.data.notificationPreferences);
       setReminderFrequency(response.data.reminderFrequency || 'daily');
     } catch (error) {
@@ -73,7 +73,7 @@ function UserSettings() {
 
   const updatePreferences = async () => {
     try {
-      await axios.post('http://localhost:5000/users/updatePreferences', { 
+      await axios.post('https://implementing-exam-notification.onrender.com/users/updatePreferences', { 
         notificationPreferences: preferences,
         reminderFrequency
       });

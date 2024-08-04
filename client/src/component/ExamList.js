@@ -127,8 +127,8 @@ function ExamList() {
   const fetchExams = async () => {
     setLoading(true);
     try {
-      const examsResponse = await axios.get('http://localhost:5000/exams');
-      const registeredExamsResponse = await axios.get('http://localhost:5000/users/registeredExams');
+      const examsResponse = await axios.get('https://implementing-exam-notification.onrender.com/exams');
+      const registeredExamsResponse = await axios.get('https://implementing-exam-notification.onrender.com/users/registeredExams');
 
       const availableExams = examsResponse.data.filter(exam => !registeredExamsResponse.data.some(regExam => regExam._id === exam._id));
 
@@ -146,7 +146,7 @@ function ExamList() {
   const registerForExam = async (examId) => {
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:5000/exams/register', { examId });
+      const response = await axios.post('https://implementing-exam-notification.onrender.com/exams/register', { examId });
       if (response.data.authUrl) {
         window.location.href = response.data.authUrl;
       }

@@ -38,7 +38,7 @@ function AdminPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5000/exams', examData);
+      const response = await axios.post('https://implementing-exam-notification.onrender.com/exams', examData);
       console.log(response.data);
       toast.success('Exam created successfully!');
       setExamData({ name: '', date: '', venue: '', announcement: '' });
