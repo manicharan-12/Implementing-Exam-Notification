@@ -10,17 +10,15 @@ const app = express();
 app.use(cors());
 const port = process.env.PORT || 5000;
 
-// Middleware
+
 app.use(bodyParser.json());
 
-// Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 }).then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// Models
 const userSchema = new mongoose.Schema({
   name: String,
   email: String,
@@ -66,7 +64,6 @@ const User = mongoose.model('User', userSchema);
 const Exam = mongoose.model('Exam', examSchema);
 const Notification = mongoose.model('Notification', notificationSchema);
 
-// Utility functions
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -86,12 +83,10 @@ const sendNotification = async (user, subject, message) => {
   }
 
   if (user.notificationPreferences.includes('sms')) {
-    // Implement SMS sending logic here
     console.log(`SMS sent to ${user.phoneNumber}: ${message}`);
   }
 
   if (user.notificationPreferences.includes('in-app')) {
-    // Logic for in-app notifications would go here
     console.log(`In-app notification for user ${user._id}: ${message}`);
   }
 };
@@ -135,7 +130,6 @@ const addEventToCalendar = async (user, exam) => {
   });
 };
 
-// Middleware
 const getUser = async (req, res, next) => {
   try {
     const user = await User.findOne();
@@ -149,7 +143,6 @@ const getUser = async (req, res, next) => {
   }
 };
 
-// User routes
 app.get('/users', getUser, (req, res) => {
   res.json(req.user);
 });
@@ -172,7 +165,6 @@ app.get('/users/notifications', getUser, async (req, res) => {
   res.json(notifications);
 });
 
-// Exam routes
 app.post('/exams', async (req, res) => {
   const { name, date, venue, preparationMaterials, announcements } = req.body;
   const newExam = new Exam({ name, date, venue, preparationMaterials, announcements });
@@ -264,7 +256,6 @@ app.post('/exams/:examId/materials', async (req, res) => {
   res.json({ message: 'Preparation material added and notifications sent' });
 });
 
-// Notification routes
 app.post('/notifications/send', async (req, res) => {
   const notifications = await Notification.find({ sent: false });
 
@@ -278,7 +269,6 @@ app.post('/notifications/send', async (req, res) => {
   res.json({ message: 'Notifications sent' });
 });
 
-// OAuth callback
 app.get('/oauth2callback', async (req, res) => {
   const { code, state } = req.query;
   const { userId } = JSON.parse(state);
@@ -303,7 +293,6 @@ app.get('/oauth2callback', async (req, res) => {
   }
 });
 
-// Helper functions
 async function createExamNotifications(user, exam) {
   const reminderDates = [
     { days: 30, message: '1 month' },
@@ -343,7 +332,6 @@ async function createAndSendNotification(user, exam, type, message) {
   await notification.save();
 }
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: 'An error occurred', error: err.message });
